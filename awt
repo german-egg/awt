@@ -10,6 +10,7 @@ jira_ticket_url="https://eggcooperation.atlassian.net/browse"
 # System variables
 sp="   "
 color='\033[1;93m'
+error_color='\033[1;91m'
 nc='\033[0m'
 
 # Welcome message
@@ -206,9 +207,7 @@ new_task_execute() {
     # Step 4: Add an empty commit with the Jira ticket ID, url and task title
     git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
 
-    # Step 5: Update first line of CHANGELOG.md with the Jira ticket ID, url and task title and commit
-    # Example: - [EGG-123: This is a title](https://eggcooperation.atlassian.net/browse/EGG-123)
-    # If CHANGELOG.md does not exist, create it.
+    # Step 5: Update CHANGELOG.md with the Jira ticket ID, url and task title and commit
     if [ ! -f CHANGELOG.md ]; then
         touch CHANGELOG.md
     fi
@@ -262,13 +261,14 @@ check_if_repository() {
 # Check if Github CLI is installed and authenticated
 check_github_cli() {
     if ! command -v gh &>/dev/null; then
-        echo -e "$sp${color}GitHub CLI is not installed.${nc}"
+        echo -e " $sp${error_color}GitHub CLI is not installed.${nc}"
+        echo -e " $sp${nc}Please install it from https://cli.github.com/${nc}"
         echo ""
         exit 1
     fi
 
     if ! gh auth status &>/dev/null; then
-        echo -e "$sp${color}GitHub CLI is not authenticated.${nc}"
+        echo -e " $sp${color}GitHub CLI is not authenticated.${nc}"
         echo ""
         exit 1
     fi
