@@ -175,7 +175,7 @@ new_task_render_summary() {
     echo -e " $sp 2. Pull the latest changes from the remote repository"
     echo -e " $sp 3. Create a new branch named $branch_name"
     echo -e " $sp 4. Add an empty commit with the Jira ticket ID, url and task title"
-    echo -e " $sp 5. Update CHANGELOG.md with the Jira ticket ID, url and task title"
+    echo -e " $sp 5. Update CHANGELOG.md with the Jira ticket ID, url and task title and commit"
     echo -e " $sp 6. Push the new branch to the remote repository"
     echo -e " $sp 7. Open a draft pull request on GitHub to develop branch"
     echo -e ""
@@ -206,7 +206,7 @@ new_task_execute() {
     # Step 4: Add an empty commit with the Jira ticket ID, url and task title
     git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
 
-    # Step 5: Update first line of CHANGELOG.md with the Jira ticket ID, url and task title
+    # Step 5: Update first line of CHANGELOG.md with the Jira ticket ID, url and task title and commit
     # Example: - [EGG-123: This is a title](https://eggcooperation.atlassian.net/browse/EGG-123)
     # If CHANGELOG.md does not exist, create it.
     if [ ! -f CHANGELOG.md ]; then
@@ -214,6 +214,8 @@ new_task_execute() {
     fi
     change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
     echo "$change_log_line" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || exit 1
+    git add CHANGELOG.md || exit 1
+    git commit -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
 
     # Step 6: Push the new branch to the remote repository
     git push origin "$branch_name" || exit 1
