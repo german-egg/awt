@@ -1,0 +1,278 @@
+#!/bin/bash
+
+set -euo pipefail
+
+version="20240801"
+
+# Cofiguration variables
+jira_ticket_url="https://eggcooperation.atlassian.net/browse"
+
+# System variables
+sp="   "
+color='\033[1;93m'
+nc='\033[0m'
+
+# Welcome message
+wellcome() {
+    clear
+    echo -e " $sp ╭───────────────────────────────────────────────────────────────╮"
+    echo -e " $sp │                                                               │"
+    echo -e " $sp │            🥚 ${color}EGG${nc} Automation Workflow Task                    │"
+    echo -e " $sp │                                                               │"
+    echo -e " $sp │ v$version                                 by Germán Aliprandi │"
+    echo -e " $sp ╰───────────────────────────────────────────────────────────────╯"
+    echo -e ""
+}
+
+# Show "Invalid option" message and wait 1 second
+invalid_option() {
+    wellcome
+    echo -e "$sp ${color}The option selected is invalid. Please try again.${nc}"
+    sleep 1
+}
+
+# Get the new task type
+new_task_render_type_option() {
+    while true; do
+        wellcome
+        echo -e " $sp ${color}Select the type of change that you're committing:${nc}"
+        echo -e ""
+        echo -e " $sp ${color}1) feat:${nc}     A new feature"
+        echo -e " $sp ${color}2) fix:${nc}      A bug fix"
+        echo -e " $sp ${color}3) docs:${nc}     Documentation only changes"
+        echo -e " $sp ${color}4) style:${nc}    Changes that do not affect the meaning of the code"
+        echo -e " $sp ${color}5) refactor:${nc} A code change that neither fixes a bug nor adds a feature"
+        echo -e " $sp ${color}6) perf:${nc}     A code change that improves performance"
+        echo -e " $sp ${color}7) test:${nc}     Adding missing or correcting existing tests"
+        echo -e " $sp ${color}8) chore:${nc}    Changes to the build process or auxiliary tools"
+        echo -e ""
+        echo -e " $sp ${color}a) advanced:${nc} Show advanced options"
+        echo -e " $sp ${color}x) exit:${nc}     Exit now !"
+        echo -e ""
+        read -p "$sp Choice a task type: " task_type
+
+        case $task_type in
+        1)
+            task_type="feat"
+            break
+            ;;
+        2)
+            task_type="fix"
+            break
+            ;;
+        3)
+            task_type="docs"
+            break
+            ;;
+        4)
+            task_type="style"
+            break
+            ;;
+        5)
+            task_type="refactor"
+            break
+            ;;
+        6)
+            task_type="perf"
+            break
+            ;;
+        7)
+            task_type="test"
+            break
+            ;;
+        8)
+            task_type="chore"
+            break
+            ;;
+        a)
+            new_task_render_advanced_options
+            break
+            ;;
+        x) exit 0 ;;
+        *)
+            invalid_option
+            ;;
+        esac
+    done
+
+}
+
+# Get the new task Jira ticket ID
+# Valid format: "EGG-123"
+new_task_render_jira_ticket_id() {
+    while true; do
+        wellcome
+        echo -e " $sp ${color}Enter the Jira ticket ID:${nc}"
+        echo -e " $sp Format: EGG-123 (letters will be converted to uppercase)"
+        echo -e ""
+        read -p "$sp Jira ticket ID: " jira_ticket_id
+
+        # Convert input to uppercase
+        jira_ticket_id=$(echo "$jira_ticket_id" | tr '[:lower:]' '[:upper:]')
+
+        if [[ $jira_ticket_id =~ ^[A-Z]{3,4}-[0-9]{1,}$ ]]; then
+            break
+        else
+            invalid_option
+            echo -e " $sp Invalid format. Please enter a valid Jira ticket ID (e.g., EGG-123)."
+        fi
+    done
+}
+
+# Get the new task title
+# Valid format: "This is a title"
+new_task_render_title() {
+    while true; do
+        wellcome
+        echo -e " $sp ${color}Enter the task title:${nc}"
+        echo -e ""
+        read -p "$sp Task title: " task_title
+
+        if [[ $task_title =~ ^[A-Za-z0-9\ \-\_]{1,}$ ]]; then
+            break
+        else
+            invalid_option
+        fi
+
+    done
+}
+
+# Get the new task github branch name. Sugerir el nombre de la rama
+# Suggestion: "feat/EGG-123-this-is-a-title"
+# Valid format: Any valid git branch name
+new_task_render_branch_name() {
+    # Generate a suggested branch name
+    suggested_branch="$task_type/$jira_ticket_id-${task_title// /-}"
+    suggested_branch=$(echo "$suggested_branch" | tr '[:upper:]' '[:lower:]')
+
+    while true; do
+        wellcome
+        echo -e " $sp ${color}Enter the branch name:${nc}"
+        echo -e " $sp Suggestion: $suggested_branch"
+        echo -e ""
+        read -p "$sp Branch name [Press Enter to use suggestion]: " branch_name
+
+        # If user just pressed Enter, use the suggested branch name
+        if [[ -z "$branch_name" ]]; then
+            branch_name="$suggested_branch"
+            break
+        # Check if the entered branch name is valid
+        elif [[ $branch_name =~ ^[A-Za-z0-9\-\_\/\.]{1,}$ ]]; then
+            break
+        else
+            invalid_option
+            echo -e " $sp Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
+        fi
+    done
+}
+
+# Show summary of next steps and wait for confirmation
+new_task_render_summary() {
+    wellcome
+    echo -e " $sp ${color}Check the following steps and confirm:${nc}"
+    echo -e ""
+    echo -e " $sp 1. Switch to develop branch"
+    echo -e " $sp 2. Pull the latest changes from the remote repository"
+    echo -e " $sp 3. Create a new branch named $branch_name"
+    echo -e " $sp 4. Add an empty commit with the Jira ticket ID, url and task title"
+    echo -e " $sp 5. Update CHANGELOG.md with the Jira ticket ID, url and task title and commit"
+    echo -e " $sp 6. Push the new branch to the remote repository"
+    echo -e " $sp 7. Open a draft pull request on GitHub to develop branch"
+    echo -e ""
+    read -p "$sp Confirm and continue? [y/n]: " confirm
+
+    if [[ $confirm == "y" ]]; then
+        new_task_execute
+    else
+        echo -e ""
+        echo -e " $sp ${color}Task creation canceled.${nc}"
+        echo -e ""
+        exit 0
+    fi
+
+}
+
+# Execute the new task creation, abort if any step fails
+new_task_execute() {
+    # Step 1: Switch to develop branch
+    git checkout develop || exit 1
+
+    # Step 2: Pull the latest changes from the remote repository
+    git pull origin develop || exit 1
+
+    # Step 3: Create a new branch named $branch_name
+    git checkout -b "$branch_name" || exit 1
+
+    # Step 4: Add an empty commit with the Jira ticket ID, url and task title
+    git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
+
+    # Step 5: Update first line of CHANGELOG.md with the Jira ticket ID, url and task title and commit
+    # Example: - [EGG-123: This is a title](https://eggcooperation.atlassian.net/browse/EGG-123)
+    # If CHANGELOG.md does not exist, create it.
+    if [ ! -f CHANGELOG.md ]; then
+        touch CHANGELOG.md
+    fi
+    change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
+    echo "$change_log_line" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || exit 1
+    git add CHANGELOG.md || exit 1
+    git commit -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
+
+    # Step 6: Push the new branch to the remote repository
+    git push origin "$branch_name" || exit 1
+
+    # Step 7: Open a draft pull request on GitHub to develop branch
+    gh pr create --base develop --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || exit 1
+
+    echo -e ""
+    echo -e " $sp ${color}Task created successfully!${nc}"
+    echo -e ""
+    exit 0
+}
+
+# Run each step for create a new development task
+create_new_task() {
+    new_task_render_type_option
+    new_task_render_jira_ticket_id
+    new_task_render_title
+    new_task_render_branch_name
+    new_task_render_summary
+}
+
+# Initialize the script
+main() {
+    wellcome
+
+    # All the checks
+    check_if_repository
+    check_github_cli
+
+    # Create a new task
+    create_new_task
+}
+
+# Check if the script is running in a git repository
+check_if_repository() {
+    if [ ! -d .git ]; then
+        echo -e "$sp${color}This script must be run in a git repository.${nc}"
+        echo ""
+        exit 1
+    fi
+}
+
+# Check if Github CLI is installed and authenticated
+check_github_cli() {
+    if ! command -v gh &>/dev/null; then
+        echo -e "$sp${color}GitHub CLI is not installed.${nc}"
+        echo ""
+        exit 1
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        echo -e "$sp${color}GitHub CLI is not authenticated.${nc}"
+        echo ""
+        exit 1
+    fi
+}
+
+# Render the advanced options
+main "$@"
