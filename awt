@@ -216,66 +216,55 @@ new_task_execute() {
         wellcome
 
         echo -e "${color}Task creation in progress...${nc}"
+        echo -e ""
 
         for ((j = 0; j < i; j++)); do
-            echo -e "\n✅ ${color}Step $((j + 1))/${total_steps}:${nc} ${new_task_steps[$j]}"
+            echo -e "✅ ${color}Step $((j + 1))/${total_steps}:${nc} ${new_task_steps[$j]}"
         done
 
-        echo -e "\n⏳ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
+        echo -e "⏳ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
 
         case $i in
         0)
-            git checkout develop || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+            git switch develop || {
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         1)
             git pull origin develop || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         2)
             git checkout -b "$branch_name" || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         3)
             git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         4)
-            if [ ! -f CHANGELOG.md ]; then
-                touch CHANGELOG.md
-            fi
-            change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
-            echo "$change_log_line" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
-            }
+            local change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
+            local commit_message="$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title"
+            add_to_changelog "$change_log_line"
+
             git add CHANGELOG.md || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+                exit_with_error "${new_task_steps[$i]}"
             }
-            git commit -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+            git commit -m "$commit_message" || {
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         5)
             git push origin "$branch_name" || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         6)
             gh pr create --base develop --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || {
-                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
-                exit 1
+                exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         esac
@@ -285,6 +274,25 @@ new_task_execute() {
 
     echo -e "\n${color}Task created successfully!${nc}\n"
     exit 0
+}
+
+# Add entry to CHANGELOG.md and create if not exists
+add_to_changelog() {
+    if [ ! -f CHANGELOG.md ]; then
+        touch CHANGELOG.md
+    fi
+
+    echo "$1" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
+        exit_with_error "Error adding entry to CHANGELOG.md"
+    }
+}
+
+# Show error message and exit
+exit_with_error() {
+    echo -e ""
+    echo -e " $sp ${error_color}⛔ Error:${nc} $1"
+    echo -e ""
+    exit 1
 }
 
 # Run each step for create a new development task
