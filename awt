@@ -169,16 +169,21 @@ new_task_render_branch_name() {
 
 # Show summary of next steps and wait for confirmation
 new_task_render_summary() {
+    new_task_steps=("Switch to develop branch"
+        "Pull the latest changes from the remote repository"
+        "Create a new branch named $branch_name"
+        "Add an empty commit with the Jira ticket ID, URL and task title"
+        "Update CHANGELOG.md with the Jira ticket ID, URL and task title and commit"
+        "Push the new branch to the remote repository"
+        "Open a draft pull request on GitHub to develop branch")
+
     wellcome
     echo -e " $sp ${color}Check the following steps and confirm:${nc}"
     echo -e ""
-    echo -e " $sp 1. Switch to develop branch"
-    echo -e " $sp 2. Pull the latest changes from the remote repository"
-    echo -e " $sp 3. Create a new branch named $branch_name"
-    echo -e " $sp 4. Add an empty commit with the Jira ticket ID, url and task title"
-    echo -e " $sp 5. Update CHANGELOG.md with the Jira ticket ID, url and task title and commit"
-    echo -e " $sp 6. Push the new branch to the remote repository"
-    echo -e " $sp 7. Open a draft pull request on GitHub to develop branch"
+    for ((i = 0; i < ${#new_task_steps[@]}; i++)); do
+        echo -e " $sp $((i + 1)). ${new_task_steps[$i]}"
+    done
+
     echo -e ""
     read -p "$sp Confirm and continue? [y/n]: " confirm
 
@@ -203,42 +208,43 @@ new_task_execute() {
         "Push the new branch to the remote repository"
         "Open a draft pull request on GitHub to develop branch")
 
-    local total_steps=${#steps[@]}
+    local total_steps=${#new_task_steps[@]}
 
     for ((i = 0; i < total_steps; i++)); do
 
         clear
         wellcome
 
-        for ((j = 0; j < i; j++)); do
-            echo -e "\n✅ ${color}Step $((j + 1))/${total_steps}:${nc} ${steps[$j]}"
+        echo -e "${color}Task creation in progress...${nc}"
 
+        for ((j = 0; j < i; j++)); do
+            echo -e "\n✅ ${color}Step $((j + 1))/${total_steps}:${nc} ${new_task_steps[$j]}"
         done
 
-        echo -e "\n⏳ ${color}Step $((i + 1))/${total_steps}:${nc} ${steps[$i]}"
+        echo -e "\n⏳ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
 
         case $i in
         0)
             git checkout develop || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to switch to develop branch${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
         1)
             git pull origin develop || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to pull the latest changes${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
         2)
             git checkout -b "$branch_name" || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to create a new branch${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
         3)
             git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to add an empty commit${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
@@ -248,34 +254,33 @@ new_task_execute() {
             fi
             change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
             echo "$change_log_line" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to update CHANGELOG.md${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             git add CHANGELOG.md || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to add CHANGELOG.md${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             git commit -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): trying to commit CHANGELOG.md${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
         5)
             git push origin "$branch_name" || {
-                echo "⛔ ${error_color}Failed at step $((i + 1)): ${steps[$i]}${nc}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
         6)
             gh pr create --base develop --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || {
-                echo "⛔ Failed at step $((i + 1)): ${steps[$i]}"
+                echo -e "⛔  ${error_color}Step $((i + 1))/${total_steps} failed:${nc} ${new_task_steps[$i]}"
                 exit 1
             }
             ;;
         esac
 
-        echo -e "\n✅${color}Step $((i + 1))/${total_steps}:${nc} ${steps[$i]}"
-
+        echo -e "\n✅ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
     done
 
     echo -e "\n${color}Task created successfully!${nc}\n"
