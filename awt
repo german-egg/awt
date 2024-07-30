@@ -7,6 +7,7 @@ version="20240801"
 # Cofiguration variables
 dev_branch="develop"
 jira_ticket_url="https://eggcooperation.atlassian.net/browse"
+repository="https://github.com/german-egg/awt"
 
 # System variables
 color='\033[1;93m'
@@ -286,6 +287,119 @@ add_to_changelog() {
     echo "$1" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
         exit_with_error "Error adding entry to CHANGELOG.md"
     }
+}
+
+# Advanced options: Show advanced options and wait for confirmation
+new_task_render_advanced_options() {
+    local advanced_options=("Merge ${color}develop${nc} => ${color}staging${nc}" "Merge ${color}staging${nc} => ${color}demo${nc}" "Merge ${color}demo${nc} => ${color}main${nc}")
+
+    while true; do
+        wellcome
+        echo -e "${color}Advanced options:${nc}"
+        echo -e ""
+
+        for ((i = 0; i < ${#advanced_options[@]}; i++)); do
+            echo -e "${color}$((i + 1)))${nc} ${advanced_options[$i]}"
+        done
+
+        echo -e ""
+
+        echo -e "${color}v) Show version${nc}"
+        echo -e "${color}u) Update awt${nc}"
+        echo -e "${color}x) Exit${nc}"
+
+        echo -e ""
+        read -p "Choice an option: " advanced_option
+
+        case $advanced_option in
+        1)
+            merge_into develop staging
+            ;;
+        2)
+            merge_into staging demo
+            ;;
+
+        3)
+            merge_into demo main
+            ;;
+
+        u)
+            update_script
+            ;;
+        v)
+            show_version
+            ;;
+        x)
+            exit 0
+            ;;
+        *)
+            invalid_option
+            ;;
+        esac
+    done
+
+}
+
+# Advanced options: Merge branches
+merge_into() {
+    local source_branch="$1"
+    local target_branch="$2"
+
+    wellcome
+    echo -e "${color}Merging $source_branch into $target_branch...${nc}"
+    echo -e ""
+
+    git switch "$source_branch" || {
+        exit_with_error "Error switching to $source_branch"
+    }
+
+    git pull origin "$source_branch" || {
+        exit_with_error "Error pulling $source_branch"
+    }
+
+    git switch "$target_branch" || {
+        exit_with_error "Error switching to $target_branch"
+    }
+
+    git pull origin "$target_branch" || {
+        exit_with_error "Error pulling $target_branch"
+    }
+
+    git merge "$source_branch" || {
+        exit_with_error "Error merging $source_branch into $target_branch"
+    }
+
+    git push origin "$target_branch" || {
+        exit_with_error "Error pushing $target_branch"
+    }
+
+    echo -e "${color}Branches merged successfully!${nc}"
+    echo -e ""
+    read -p "Press Enter to continue..." -n 1 -r
+}
+
+# Advanced options: Update the script from https://raw.githubusercontent.com/german-egg/awt/main/awt
+# This will overwrite the current script with the latest version and change excution permissions
+update_script() {
+    wellcome
+    echo -e "${color}Updating the script...${nc}"
+    echo -e ""
+
+    curl -s https://raw.githubusercontent.com/german-egg/awt/main/awt >awt
+    chmod +x awt
+
+    echo -e "${color}Script updated successfully!${nc}"
+    echo -e ""
+    read -p "Press Enter to continue..." -n 1 -r
+    exit 0
+}
+
+# Advanced options: Show the script version
+show_version() {
+    wellcome
+    echo -e "${color}Script version:${nc} $version"
+    echo -e ""
+    read -p "Press Enter to continue..." -n 1 -r
 }
 
 # Show error message and exit
