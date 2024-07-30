@@ -307,11 +307,9 @@ new_task_render_advanced_options() {
         done
 
         echo -e ""
-
         echo -e "${color}v) Show version${nc}"
         echo -e "${color}u) Update awt${nc}"
         echo -e "${color}x) Exit${nc}"
-
         echo -e ""
         read -p "Choice an option: " advanced_option
 
