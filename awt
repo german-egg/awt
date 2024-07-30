@@ -448,7 +448,7 @@ main() {
 
     # All the checks
     check_if_repository
-    check_github_cli
+    # check_github_cli
 
     # Create a new task
     create_new_task
