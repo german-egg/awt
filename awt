@@ -16,12 +16,12 @@ nc='\033[0m'
 # Welcome message
 wellcome() {
     clear
-    echo -e " $sp ╭───────────────────────────────────────────────────────────────╮"
-    echo -e " $sp │                                                               │"
-    echo -e " $sp │            🥚 ${color}EGG${nc} Automation Workflow Task                    │"
-    echo -e " $sp │                                                               │"
-    echo -e " $sp │ v$version                                 by Germán Aliprandi │"
-    echo -e " $sp ╰───────────────────────────────────────────────────────────────╯"
+    echo -e "╭───────────────────────────────────────────────────────────────╮"
+    echo -e "│                                                               │"
+    echo -e "│            🥚 ${color}EGG${nc} Automation Workflow Task                    │"
+    echo -e "│                                                               │"
+    echo -e "│ v$version                                 by Germán Aliprandi │"
+    echo -e "╰───────────────────────────────────────────────────────────────╯"
     echo -e ""
 }
 
@@ -36,21 +36,21 @@ invalid_option() {
 new_task_render_type_option() {
     while true; do
         wellcome
-        echo -e " $sp ${color}Select the type of change that you're committing:${nc}"
+        echo -e "${color}Select the type of change that you're committing:${nc}"
         echo -e ""
-        echo -e " $sp ${color}1) feat:${nc}     A new feature"
-        echo -e " $sp ${color}2) fix:${nc}      A bug fix"
-        echo -e " $sp ${color}3) docs:${nc}     Documentation only changes"
-        echo -e " $sp ${color}4) style:${nc}    Changes that do not affect the meaning of the code"
-        echo -e " $sp ${color}5) refactor:${nc} A code change that neither fixes a bug nor adds a feature"
-        echo -e " $sp ${color}6) perf:${nc}     A code change that improves performance"
-        echo -e " $sp ${color}7) test:${nc}     Adding missing or correcting existing tests"
-        echo -e " $sp ${color}8) chore:${nc}    Changes to the build process or auxiliary tools"
+        echo -e "${color}1) feat:${nc}     A new feature"
+        echo -e "${color}2) fix:${nc}      A bug fix"
+        echo -e "${color}3) docs:${nc}     Documentation only changes"
+        echo -e "${color}4) style:${nc}    Changes that do not affect the meaning of the code"
+        echo -e "${color}5) refactor:${nc} A code change that neither fixes a bug nor adds a feature"
+        echo -e "${color}6) perf:${nc}     A code change that improves performance"
+        echo -e "${color}7) test:${nc}     Adding missing or correcting existing tests"
+        echo -e "${color}8) chore:${nc}    Changes to the build process or auxiliary tools"
         echo -e ""
-        echo -e " $sp ${color}a) advanced:${nc} Show advanced options"
-        echo -e " $sp ${color}x) exit:${nc}     Exit now !"
+        echo -e "${color}a) advanced:${nc} Show advanced options"
+        echo -e "${color}x) exit:${nc}     Exit now !"
         echo -e ""
-        read -p "$sp Choice a task type: " task_type
+        read -p "Choice a task type: " task_type
 
         case $task_type in
         1)
@@ -103,8 +103,8 @@ new_task_render_type_option() {
 new_task_render_jira_ticket_id() {
     while true; do
         wellcome
-        echo -e " $sp ${color}Enter the Jira ticket ID:${nc}"
-        echo -e " $sp Format: EGG-123 (letters will be converted to uppercase)"
+        echo -e "${color}Enter the Jira ticket ID:${nc}"
+        echo -e "Format: EGG-123 (letters will be converted to uppercase)"
         echo -e ""
         read -p "$sp Jira ticket ID: " jira_ticket_id
 
@@ -115,7 +115,7 @@ new_task_render_jira_ticket_id() {
             break
         else
             invalid_option
-            echo -e " $sp Invalid format. Please enter a valid Jira ticket ID (e.g., EGG-123)."
+            echo -e "Invalid format. Please enter a valid Jira ticket ID (e.g., EGG-123)."
         fi
     done
 }
@@ -125,7 +125,7 @@ new_task_render_jira_ticket_id() {
 new_task_render_title() {
     while true; do
         wellcome
-        echo -e " $sp ${color}Enter the task title:${nc}"
+        echo -e "${color}Enter the task title:${nc}"
         echo -e ""
         read -p "$sp Task title: " task_title
 
@@ -148,10 +148,10 @@ new_task_render_branch_name() {
 
     while true; do
         wellcome
-        echo -e " $sp ${color}Enter the branch name:${nc}"
-        echo -e " $sp Suggestion: $suggested_branch"
+        echo -e "${color}Enter the branch name:${nc}"
+        echo -e "Suggestion: $suggested_branch"
         echo -e ""
-        read -p "$sp Branch name [Press Enter to use suggestion]: " branch_name
+        read -p "Branch name [Press Enter to use suggestion]: " branch_name
 
         # If user just pressed Enter, use the suggested branch name
         if [[ -z "$branch_name" ]]; then
@@ -162,7 +162,7 @@ new_task_render_branch_name() {
             break
         else
             invalid_option
-            echo -e " $sp Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
+            echo -e "Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
         fi
     done
 }
@@ -178,10 +178,10 @@ new_task_render_summary() {
         "Open a draft pull request on GitHub to develop branch")
 
     wellcome
-    echo -e " $sp ${color}Check the following steps and confirm:${nc}"
+    echo -e "${color}Check the following steps and confirm:${nc}"
     echo -e ""
     for ((i = 0; i < ${#new_task_steps[@]}; i++)); do
-        echo -e " $sp $((i + 1)). ${new_task_steps[$i]}"
+        echo -e "$((i + 1)). ${new_task_steps[$i]}"
     done
 
     echo -e ""
@@ -191,7 +191,7 @@ new_task_render_summary() {
         new_task_execute
     else
         echo -e ""
-        echo -e " $sp ${color}Task creation canceled.${nc}"
+        echo -e "${color}Task creation canceled.${nc}"
         echo -e ""
         exit 0
     fi
@@ -290,7 +290,7 @@ add_to_changelog() {
 # Show error message and exit
 exit_with_error() {
     echo -e ""
-    echo -e " $sp ${error_color}⛔ Error:${nc} $1"
+    echo -e "${error_color}⛔ Error:${nc} $1"
     echo -e ""
     exit 1
 }
