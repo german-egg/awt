@@ -195,36 +195,80 @@ new_task_render_summary() {
 
 # Execute the new task creation, abort if any step fails
 new_task_execute() {
-    # Step 1: Switch to develop branch
-    git checkout develop || exit 1
+    local steps=("Switch to develop branch"
+        "Pull the latest changes from the remote repository"
+        "Create a new branch named $branch_name"
+        "Add an empty commit with the Jira ticket ID, URL and task title"
+        "Update CHANGELOG.md with the Jira ticket ID, URL and task title and commit"
+        "Push the new branch to the remote repository"
+        "Open a draft pull request on GitHub to develop branch")
 
-    # Step 2: Pull the latest changes from the remote repository
-    git pull origin develop || exit 1
+    local total_steps=${#steps[@]}
 
-    # Step 3: Create a new branch named $branch_name
-    git checkout -b "$branch_name" || exit 1
+    for ((i = 0; i < total_steps; i++)); do
+        echo -e "\nStep $((i + 1))/${total_steps}: ${steps[$i]}"
 
-    # Step 4: Add an empty commit with the Jira ticket ID, url and task title
-    git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
+        case $i in
+        0)
+            git checkout develop || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        1)
+            git pull origin develop || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        2)
+            git checkout -b "$branch_name" || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        3)
+            git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        4)
+            if [ ! -f CHANGELOG.md ]; then
+                touch CHANGELOG.md
+            fi
+            change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
+            echo "$change_log_line" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            git add CHANGELOG.md || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            git commit -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        5)
+            git push origin "$branch_name" || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        6)
+            gh pr create --base develop --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || {
+                echo "Failed at step $((i + 1)): ${steps[$i]}"
+                exit 1
+            }
+            ;;
+        esac
 
-    # Step 5: Update CHANGELOG.md with the Jira ticket ID, url and task title and commit
-    if [ ! -f CHANGELOG.md ]; then
-        touch CHANGELOG.md
-    fi
-    change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
-    echo "$change_log_line" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || exit 1
-    git add CHANGELOG.md || exit 1
-    git commit -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || exit 1
+        echo -e "Completed: ${steps[$i]}"
+    done
 
-    # Step 6: Push the new branch to the remote repository
-    git push origin "$branch_name" || exit 1
-
-    # Step 7: Open a draft pull request on GitHub to develop branch
-    gh pr create --base develop --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || exit 1
-
-    echo -e ""
-    echo -e " $sp ${color}Task created successfully!${nc}"
-    echo -e ""
+    echo -e "\n${color}Task created successfully!${nc}\n"
     exit 0
 }
 
