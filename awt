@@ -1,0 +1,341 @@
+#!/bin/bash
+
+set -euo pipefail
+
+version="20240801"
+
+# Cofiguration variables
+dev_branch="develop"
+jira_ticket_url="https://eggcooperation.atlassian.net/browse"
+
+# System variables
+color='\033[1;93m'
+error_color='\033[1;91m'
+nc='\033[0m'
+
+# Welcome message
+wellcome() {
+    clear
+    echo -e "╭───────────────────────────────────────────────────────────────╮"
+    echo -e "│                                                               │"
+    echo -e "│            🥚 ${color}EGG${nc} Automation Workflow Task                    │"
+    echo -e "│                                                               │"
+    echo -e "│ v$version                                 by Germán Aliprandi │"
+    echo -e "╰───────────────────────────────────────────────────────────────╯"
+    echo -e ""
+}
+
+# Show "Invalid option" message and wait 1 second
+invalid_option() {
+    wellcome
+    echo -e "${color}The option selected is invalid. Please try again.${nc}"
+    sleep 1
+}
+
+# Get the new task type
+new_task_render_type_option() {
+    local task_type_opions=("feat" "fix" "docs" "style" "refactor" "perf" "test" "chore")
+    local task_type_opions_desc=("A new feature" "A bug fix" "Documentation only changes" "Changes that do not affect the meaning of the code" "A code change that neither fixes a bug nor adds a feature" "A code change that improves performance" "Adding missing or correcting existing tests" "Changes to the build process or auxiliary tools")
+
+    while true; do
+        wellcome
+        echo -e "${color}Select the type of change that you're committing:${nc}"
+        echo -e ""
+
+        # Show the task type options
+        for ((i = 0; i < ${#task_type_opions[@]}; i++)); do
+            echo -e "${color}$((i + 1))) ${task_type_opions[$i]}:${nc} ${task_type_opions_desc[$i]}"
+        done
+
+        echo -e ""
+        echo -e "${color}a) Advanced options${nc}"
+        echo -e "${color}x) Exit${nc}"
+        echo -e ""
+
+        read -p "Choice a task type: " task_type
+
+        case $task_type in
+        1)
+            task_type="feat"
+            break
+            ;;
+        2)
+            task_type="fix"
+            break
+            ;;
+        3)
+            task_type="docs"
+            break
+            ;;
+        4)
+            task_type="style"
+            break
+            ;;
+        5)
+            task_type="refactor"
+            break
+            ;;
+        6)
+            task_type="perf"
+            break
+            ;;
+        7)
+            task_type="test"
+            break
+            ;;
+        8)
+            task_type="chore"
+            break
+            ;;
+        a)
+            new_task_render_advanced_options
+            break
+            ;;
+        x) exit 0 ;;
+        *)
+            invalid_option
+            ;;
+        esac
+    done
+
+}
+
+# Get the new task Jira ticket ID
+# Valid format: "EGG-123"
+new_task_render_jira_ticket_id() {
+    while true; do
+        wellcome
+        echo -e "${color}Enter the Jira ticket ID:${nc}"
+        echo -e "Format: EGG-123 (letters will be converted to uppercase)"
+        echo -e ""
+        read -p "Jira ticket ID: " jira_ticket_id
+
+        # Convert input to uppercase
+        jira_ticket_id=$(echo "$jira_ticket_id" | tr '[:lower:]' '[:upper:]')
+
+        if [[ $jira_ticket_id =~ ^[A-Z]{3,4}-[0-9]{1,}$ ]]; then
+            break
+        else
+            invalid_option
+            echo -e "Invalid format. Please enter a valid Jira ticket ID (e.g., EGG-123)."
+        fi
+    done
+}
+
+# Get the new task title
+# Valid format: "This is a title"
+new_task_render_title() {
+    while true; do
+        wellcome
+        echo -e "${color}Enter the task title:${nc}"
+        echo -e ""
+        read -p "Task title: " task_title
+
+        if [[ $task_title =~ ^[A-Za-z0-9\ \-\_]{1,}$ ]]; then
+            break
+        else
+            invalid_option
+        fi
+
+    done
+}
+
+# Get the new task branch name
+# Valid format: "feat/EGG-123-this-is-a-title"
+new_task_render_branch_name() {
+    # Generate a suggested branch name
+    suggested_branch="$task_type/$jira_ticket_id-${task_title// /-}"
+    suggested_branch=$(echo "$suggested_branch" | tr '[:upper:]' '[:lower:]')
+
+    while true; do
+        wellcome
+        echo -e "${color}Enter the branch name:${nc}"
+        echo -e "Suggestion: $suggested_branch"
+        echo -e ""
+        read -p "Branch name [Press Enter to use suggestion]: " branch_name
+
+        # If user just pressed Enter, use the suggested branch name
+        if [[ -z "$branch_name" ]]; then
+            branch_name="$suggested_branch"
+            break
+        # Check if the entered branch name is valid
+        elif [[ $branch_name =~ ^[A-Za-z0-9\-\_\/\.]{1,}$ ]]; then
+            break
+        else
+            invalid_option
+            echo -e "Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
+        fi
+    done
+}
+
+# Show summary of next steps and wait for confirmation
+new_task_render_summary() {
+    new_task_steps=("Switch to ${dev_branch} branch"
+        "Pull the latest changes from the remote repository"
+        "Create a new branch named $branch_name"
+        "Add an empty commit with the Jira ticket ID, URL and task title"
+        "Update CHANGELOG.md with the Jira ticket ID, URL and task title and commit"
+        "Push the new branch to the remote repository"
+        "Open a draft pull request on GitHub to ${dev_branch} branch")
+
+    wellcome
+    echo -e "${color}Check the following steps and confirm:${nc}"
+    echo -e ""
+    for ((i = 0; i < ${#new_task_steps[@]}; i++)); do
+        echo -e "$((i + 1)). ${new_task_steps[$i]}"
+    done
+
+    echo -e ""
+    read -p "Confirm and continue? [y/n]: " confirm
+
+    if [[ $confirm == "y" ]]; then
+        new_task_execute
+    else
+        echo -e ""
+        echo -e "${color}Task creation canceled.${nc}"
+        echo -e ""
+        exit 0
+    fi
+
+}
+
+# Execute the new task creation, abort if any step fails
+new_task_execute() {
+    local steps=("Switch to ${dev_branch} branch"
+        "Pull the latest changes from the remote repository"
+        "Create a new branch named $branch_name"
+        "Add an empty commit with the Jira ticket ID, URL and task title"
+        "Update CHANGELOG.md with the Jira ticket ID, URL and task title and commit"
+        "Push the new branch to the remote repository"
+        "Open a draft pull request on GitHub to ${dev_branch} branch")
+
+    local total_steps=${#new_task_steps[@]}
+
+    for ((i = 0; i < total_steps; i++)); do
+
+        clear
+        wellcome
+
+        echo -e "${color}Task creation in progress...${nc}"
+        echo -e ""
+
+        for ((j = 0; j < i; j++)); do
+            echo -e "✅ ${color}Step $((j + 1))/${total_steps}:${nc} ${new_task_steps[$j]}"
+        done
+
+        echo -e "⏳ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
+
+        case $i in
+        0)
+            git switch "$dev_branch" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        1)
+            git pull origin "$dev_branch" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        2)
+            git checkout -b "$branch_name" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        3)
+            git commit --allow-empty -m "$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        4)
+            local change_log_line="- [$jira_ticket_id: $task_title]($jira_ticket_url/$jira_ticket_id)"
+            local commit_message="$jira_ticket_id: $jira_ticket_url/$jira_ticket_id - $task_title"
+            add_to_changelog "$change_log_line"
+
+            git add CHANGELOG.md || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            git commit -m "$commit_message" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        5)
+            git push origin "$branch_name" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        6)
+            gh pr create --base "${dev_branch}" --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || {
+                exit_with_error "${new_task_steps[$i]}"
+            }
+            ;;
+        esac
+
+        echo -e "\n✅ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
+    done
+
+    echo -e "\n${color}Task created successfully!${nc}\n"
+    exit 0
+}
+
+# Add entry to CHANGELOG.md and create if not exists
+add_to_changelog() {
+    if [ ! -f CHANGELOG.md ]; then
+        touch CHANGELOG.md
+    fi
+
+    echo "$1" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
+        exit_with_error "Error adding entry to CHANGELOG.md"
+    }
+}
+
+# Show error message and exit
+exit_with_error() {
+    echo -e ""
+    echo -e "${error_color}⛔ Error:${nc} $1"
+    echo -e ""
+    exit 1
+}
+
+# Run each step for create a new development task
+create_new_task() {
+    new_task_render_type_option
+    new_task_render_jira_ticket_id
+    new_task_render_title
+    new_task_render_branch_name
+    new_task_render_summary
+}
+
+# Check if the script is running in a git repository
+check_if_repository() {
+    if [ ! -d .git ]; then
+        exit_with_error "The script must be run in a git repository."
+    fi
+}
+
+# Check if Github CLI is installed and authenticated
+check_github_cli() {
+    if ! command -v gh &>/dev/null; then
+        local error_message="GitHub CLI is not installed. Please install it from https://cli.github.com/"
+        exit_with_error "$error_message"
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        local error_message="GitHub CLI is not authenticated. Please run 'gh auth login' to authenticate."
+        exit_with_error "$error_message"
+    fi
+}
+
+# Initialize the script
+main() {
+    wellcome
+
+    # All the checks
+    check_if_repository
+    check_github_cli
+
+    # Create a new task
+    create_new_task
+}
+
+# Render the advanced options
+main "$@"
