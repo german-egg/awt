@@ -291,7 +291,7 @@ add_to_changelog() {
 
 # Advanced options: Show advanced options and wait for confirmation
 new_task_render_advanced_options() {
-    local advanced_options=("Update this script" "Show the script version")
+    local advanced_options=("Merge ${color}develop${nc} => ${color}staging${nc}" "Merge ${color}staging${nc} => ${color}demo${nc}" "Merge ${color}demo${nc} => ${color}main${nc}")
 
     while true; do
         wellcome
@@ -303,6 +303,9 @@ new_task_render_advanced_options() {
         done
 
         echo -e ""
+
+        echo -e "${color}v) Show version${nc}"
+        echo -e "${color}u) Update awt${nc}"
         echo -e "${color}x) Exit${nc}"
 
         echo -e ""
@@ -310,9 +313,20 @@ new_task_render_advanced_options() {
 
         case $advanced_option in
         1)
-            update_script
+            merge_into develop staging
             ;;
         2)
+            merge_into staging demo
+            ;;
+
+        3)
+            merge_into demo main
+            ;;
+
+        u)
+            update_script
+            ;;
+        v)
             show_version
             ;;
         x)
@@ -324,6 +338,44 @@ new_task_render_advanced_options() {
         esac
     done
 
+}
+
+# Advanced options: Merge branches
+merge_into() {
+    local source_branch="$1"
+    local target_branch="$2"
+
+    wellcome
+    echo -e "${color}Merging $source_branch into $target_branch...${nc}"
+    echo -e ""
+
+    git switch "$source_branch" || {
+        exit_with_error "Error switching to $source_branch"
+    }
+
+    git pull origin "$source_branch" || {
+        exit_with_error "Error pulling $source_branch"
+    }
+
+    git switch "$target_branch" || {
+        exit_with_error "Error switching to $target_branch"
+    }
+
+    git pull origin "$target_branch" || {
+        exit_with_error "Error pulling $target_branch"
+    }
+
+    git merge "$source_branch" || {
+        exit_with_error "Error merging $source_branch into $target_branch"
+    }
+
+    git push origin "$target_branch" || {
+        exit_with_error "Error pushing $target_branch"
+    }
+
+    echo -e "${color}Branches merged successfully!${nc}"
+    echo -e ""
+    read -p "Press Enter to continue..." -n 1 -r
 }
 
 # Advanced options: Update the script from https://raw.githubusercontent.com/german-egg/awt/main/awt
