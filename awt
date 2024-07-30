@@ -7,6 +7,7 @@ version="20240801"
 # Cofiguration variables
 dev_branch="develop"
 jira_ticket_url="https://eggcooperation.atlassian.net/browse"
+repository="https://github.com/german-egg/awt"
 
 # System variables
 color='\033[1;93m'
@@ -286,6 +287,67 @@ add_to_changelog() {
     echo "$1" | cat - CHANGELOG.md >temp && mv temp CHANGELOG.md || {
         exit_with_error "Error adding entry to CHANGELOG.md"
     }
+}
+
+# Advanced options: Show advanced options and wait for confirmation
+new_task_render_advanced_options() {
+    local advanced_options=("Update this script" "Show the script version")
+
+    while true; do
+        wellcome
+        echo -e "${color}Advanced options:${nc}"
+        echo -e ""
+
+        for ((i = 0; i < ${#advanced_options[@]}; i++)); do
+            echo -e "${color}$((i + 1)))${nc} ${advanced_options[$i]}"
+        done
+
+        echo -e ""
+        echo -e "${color}x) Exit${nc}"
+
+        echo -e ""
+        read -p "Choice an option: " advanced_option
+
+        case $advanced_option in
+        1)
+            update_script
+            ;;
+        2)
+            show_version
+            ;;
+        x)
+            exit 0
+            ;;
+        *)
+            invalid_option
+            ;;
+        esac
+    done
+
+}
+
+# Advanced options: Update the script from https://raw.githubusercontent.com/german-egg/awt/main/awt
+# This will overwrite the current script with the latest version and change excution permissions
+update_script() {
+    wellcome
+    echo -e "${color}Updating the script...${nc}"
+    echo -e ""
+
+    curl -s https://raw.githubusercontent.com/german-egg/awt/main/awt >awt
+    chmod +x awt
+
+    echo -e "${color}Script updated successfully!${nc}"
+    echo -e ""
+    read -p "Press Enter to continue..." -n 1 -r
+    exit 0
+}
+
+# Advanced options: Show the script version
+show_version() {
+    wellcome
+    echo -e "${color}Script version:${nc} $version"
+    echo -e ""
+    read -p "Press Enter to continue..." -n 1 -r
 }
 
 # Show error message and exit
