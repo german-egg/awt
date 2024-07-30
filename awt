@@ -333,8 +333,8 @@ update_script() {
     echo -e "${color}Updating the script...${nc}"
     echo -e ""
 
-    curl -s https://raw.githubusercontent.com/german-egg/awt/main/awt >awt
-    chmod +x awt
+    curl -s https://raw.githubusercontent.com/german-egg/awt/main/awt >awt2
+    chmod +x awt2
 
     echo -e "${color}Script updated successfully!${nc}"
     echo -e ""
