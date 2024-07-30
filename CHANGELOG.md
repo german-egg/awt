@@ -1,2 +1,3 @@
+- [EGG-111: Improve execution](https://eggcooperation.atlassian.net/browse/EGG-111)
 - [EGG-111: Show execution progress](https://eggcooperation.atlassian.net/browse/EGG-111)
 - [EGG-113: Create a new awt](https://eggcooperation.atlassian.net/browse/EGG-113)
