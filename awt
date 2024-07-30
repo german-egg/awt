@@ -271,6 +271,7 @@ new_task_execute() {
                 echo -e "\n✅ ${color}Step $((i + 1))/${total_steps}:${nc} ${new_task_steps[$i]}"
             else
                 echo -e "\n${color}⚠️ Draft PR could not be created. Please create it manually.${nc}"
+                echo -e "If prefer that we cretae the PR for you, please install GitHub CLI and authenticate it.${nc}"
             fi
             ;;
         esac
