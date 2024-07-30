@@ -5,10 +5,10 @@ set -euo pipefail
 version="20240801"
 
 # Cofiguration variables
+dev_branch="develop"
 jira_ticket_url="https://eggcooperation.atlassian.net/browse"
 
 # System variables
-sp="   "
 color='\033[1;93m'
 error_color='\033[1;91m'
 nc='\033[0m'
@@ -28,28 +28,30 @@ wellcome() {
 # Show "Invalid option" message and wait 1 second
 invalid_option() {
     wellcome
-    echo -e "$sp ${color}The option selected is invalid. Please try again.${nc}"
+    echo -e "${color}The option selected is invalid. Please try again.${nc}"
     sleep 1
 }
 
 # Get the new task type
 new_task_render_type_option() {
+    local task_type_opions=("feat" "fix" "docs" "style" "refactor" "perf" "test" "chore")
+    local task_type_opions_desc=("A new feature" "A bug fix" "Documentation only changes" "Changes that do not affect the meaning of the code" "A code change that neither fixes a bug nor adds a feature" "A code change that improves performance" "Adding missing or correcting existing tests" "Changes to the build process or auxiliary tools")
+
     while true; do
         wellcome
         echo -e "${color}Select the type of change that you're committing:${nc}"
         echo -e ""
-        echo -e "${color}1) feat:${nc}     A new feature"
-        echo -e "${color}2) fix:${nc}      A bug fix"
-        echo -e "${color}3) docs:${nc}     Documentation only changes"
-        echo -e "${color}4) style:${nc}    Changes that do not affect the meaning of the code"
-        echo -e "${color}5) refactor:${nc} A code change that neither fixes a bug nor adds a feature"
-        echo -e "${color}6) perf:${nc}     A code change that improves performance"
-        echo -e "${color}7) test:${nc}     Adding missing or correcting existing tests"
-        echo -e "${color}8) chore:${nc}    Changes to the build process or auxiliary tools"
+
+        # Show the task type options
+        for ((i = 0; i < ${#task_type_opions[@]}; i++)); do
+            echo -e "${color}$((i + 1))) ${task_type_opions[$i]}:${nc} ${task_type_opions_desc[$i]}"
+        done
+
         echo -e ""
-        echo -e "${color}a) advanced:${nc} Show advanced options"
-        echo -e "${color}x) exit:${nc}     Exit now !"
+        echo -e "${color}a) Advanced options${nc}"
+        echo -e "${color}x) Exit${nc}"
         echo -e ""
+
         read -p "Choice a task type: " task_type
 
         case $task_type in
@@ -106,7 +108,7 @@ new_task_render_jira_ticket_id() {
         echo -e "${color}Enter the Jira ticket ID:${nc}"
         echo -e "Format: EGG-123 (letters will be converted to uppercase)"
         echo -e ""
-        read -p "$sp Jira ticket ID: " jira_ticket_id
+        read -p "Jira ticket ID: " jira_ticket_id
 
         # Convert input to uppercase
         jira_ticket_id=$(echo "$jira_ticket_id" | tr '[:lower:]' '[:upper:]')
@@ -127,7 +129,7 @@ new_task_render_title() {
         wellcome
         echo -e "${color}Enter the task title:${nc}"
         echo -e ""
-        read -p "$sp Task title: " task_title
+        read -p "Task title: " task_title
 
         if [[ $task_title =~ ^[A-Za-z0-9\ \-\_]{1,}$ ]]; then
             break
@@ -138,9 +140,8 @@ new_task_render_title() {
     done
 }
 
-# Get the new task github branch name. Sugerir el nombre de la rama
-# Suggestion: "feat/EGG-123-this-is-a-title"
-# Valid format: Any valid git branch name
+# Get the new task branch name
+# Valid format: "feat/EGG-123-this-is-a-title"
 new_task_render_branch_name() {
     # Generate a suggested branch name
     suggested_branch="$task_type/$jira_ticket_id-${task_title// /-}"
@@ -169,13 +170,13 @@ new_task_render_branch_name() {
 
 # Show summary of next steps and wait for confirmation
 new_task_render_summary() {
-    new_task_steps=("Switch to develop branch"
+    new_task_steps=("Switch to ${dev_branch} branch"
         "Pull the latest changes from the remote repository"
         "Create a new branch named $branch_name"
         "Add an empty commit with the Jira ticket ID, URL and task title"
         "Update CHANGELOG.md with the Jira ticket ID, URL and task title and commit"
         "Push the new branch to the remote repository"
-        "Open a draft pull request on GitHub to develop branch")
+        "Open a draft pull request on GitHub to ${dev_branch} branch")
 
     wellcome
     echo -e "${color}Check the following steps and confirm:${nc}"
@@ -185,7 +186,7 @@ new_task_render_summary() {
     done
 
     echo -e ""
-    read -p "$sp Confirm and continue? [y/n]: " confirm
+    read -p "Confirm and continue? [y/n]: " confirm
 
     if [[ $confirm == "y" ]]; then
         new_task_execute
@@ -200,13 +201,13 @@ new_task_render_summary() {
 
 # Execute the new task creation, abort if any step fails
 new_task_execute() {
-    local steps=("Switch to develop branch"
+    local steps=("Switch to ${dev_branch} branch"
         "Pull the latest changes from the remote repository"
         "Create a new branch named $branch_name"
         "Add an empty commit with the Jira ticket ID, URL and task title"
         "Update CHANGELOG.md with the Jira ticket ID, URL and task title and commit"
         "Push the new branch to the remote repository"
-        "Open a draft pull request on GitHub to develop branch")
+        "Open a draft pull request on GitHub to ${dev_branch} branch")
 
     local total_steps=${#new_task_steps[@]}
 
@@ -226,12 +227,12 @@ new_task_execute() {
 
         case $i in
         0)
-            git switch develop || {
+            git switch "$dev_branch" || {
                 exit_with_error "${new_task_steps[$i]}"
             }
             ;;
         1)
-            git pull origin develop || {
+            git pull origin "$dev_branch" || {
                 exit_with_error "${new_task_steps[$i]}"
             }
             ;;
@@ -263,7 +264,7 @@ new_task_execute() {
             }
             ;;
         6)
-            gh pr create --base develop --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || {
+            gh pr create --base "${dev_branch}" --draft --title "$jira_ticket_id: $task_title" --body "Closes #$jira_ticket_id" || {
                 exit_with_error "${new_task_steps[$i]}"
             }
             ;;
@@ -304,6 +305,26 @@ create_new_task() {
     new_task_render_summary
 }
 
+# Check if the script is running in a git repository
+check_if_repository() {
+    if [ ! -d .git ]; then
+        exit_with_error "The script must be run in a git repository."
+    fi
+}
+
+# Check if Github CLI is installed and authenticated
+check_github_cli() {
+    if ! command -v gh &>/dev/null; then
+        local error_message="GitHub CLI is not installed. Please install it from https://cli.github.com/"
+        exit_with_error "$error_message"
+    fi
+
+    if ! gh auth status &>/dev/null; then
+        local error_message="GitHub CLI is not authenticated. Please run 'gh auth login' to authenticate."
+        exit_with_error "$error_message"
+    fi
+}
+
 # Initialize the script
 main() {
     wellcome
@@ -314,31 +335,6 @@ main() {
 
     # Create a new task
     create_new_task
-}
-
-# Check if the script is running in a git repository
-check_if_repository() {
-    if [ ! -d .git ]; then
-        echo -e "$sp${color}This script must be run in a git repository.${nc}"
-        echo ""
-        exit 1
-    fi
-}
-
-# Check if Github CLI is installed and authenticated
-check_github_cli() {
-    if ! command -v gh &>/dev/null; then
-        echo -e " $sp${error_color}GitHub CLI is not installed.${nc}"
-        echo -e " $sp${nc}Please install it from https://cli.github.com/${nc}"
-        echo ""
-        exit 1
-    fi
-
-    if ! gh auth status &>/dev/null; then
-        echo -e " $sp${color}GitHub CLI is not authenticated.${nc}"
-        echo ""
-        exit 1
-    fi
 }
 
 # Render the advanced options
