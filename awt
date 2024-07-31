@@ -130,7 +130,7 @@ new_task_render_branch_name() {
             branch_name="$suggested_branch"
         fi
 
-        if [[ ! $branch_name =~ ^[A-Za-z0-9\-\_\/\.]+$ ]]; then
+        if [[ $branch_name =~ ^[A-Za-z0-9\-\_\/\.]{1,}$ ]]; then
             invalid_option "Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
             continue
         fi
