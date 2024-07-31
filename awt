@@ -28,7 +28,7 @@ welcome() {
 EOF
 }
 
-# Show "Invalid option" message with optional detailed message and wait 1 second
+# Show "Invalid option" message with optional detailed message and wait 2 second
 invalid_option() {
     local detailed_msg=${1:-}
     welcome
