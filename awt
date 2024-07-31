@@ -28,11 +28,16 @@ welcome() {
 EOF
 }
 
-# Show "Invalid option" message and wait 1 second
+# Show "Invalid option" message with optional detailed message and wait 1 second
 invalid_option() {
+    local detailed_msg=${1:-}
     welcome
-    echo -e "${color}The option selected is invalid. Please try again.${nc}"
-    sleep 1
+    echo -e "${error_color}Invalid option.${nc} Please try again."
+    if [[ -n "$detailed_msg" ]]; then
+        echo -e "${color}Details:${nc} $detailed_msg"
+    fi
+    echo
+    sleep 2
 }
 
 # Get the new task type
@@ -72,7 +77,7 @@ new_task_render_type_option() {
             break
             ;;
         x) exit 0 ;;
-        *) invalid_option ;;
+        *) invalid_option "Please enter a valid option." ;;
         esac
     done
 }
@@ -90,8 +95,7 @@ new_task_render_jira_ticket_id() {
         if [[ $jira_ticket_id =~ ^[A-Z]{3,4}-[0-9]+$ ]]; then
             break
         else
-            invalid_option
-            echo -e "Invalid format. Please enter a valid Jira ticket ID (e.g., EGG-123)."
+            invalid_option "Invalid format. Please enter a valid Jira ticket ID (e.g., EGG-123)."
         fi
     done
 }
@@ -106,7 +110,7 @@ new_task_render_title() {
         if [[ $task_title =~ ^[A-Za-z0-9\ \-\_]+$ ]]; then
             break
         else
-            invalid_option
+            invalid_option "Task title can only contain letters, numbers, hyphens, underscores, and spaces."
         fi
     done
 }
@@ -127,8 +131,7 @@ new_task_render_branch_name() {
         fi
 
         if [[ ! $branch_name =~ ^[A-Za-z0-9\-\_\/\.]+$ ]]; then
-            invalid_option
-            echo -e "Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
+            invalid_option "Branch name can only contain letters, numbers, hyphens, underscores, forward slashes, and dots."
             continue
         fi
 
@@ -272,7 +275,7 @@ new_task_render_advanced_options() {
         u) update_script ;;
         v) show_version ;;
         x) exit 0 ;;
-        *) invalid_option ;;
+        *) invalid_option "Please enter a valid option." ;;
         esac
     done
 }
